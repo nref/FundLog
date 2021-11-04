@@ -1,0 +1,81 @@
+﻿@page "/accounts"
+@using FundLog.Api.Features.Accounts.Effects
+@using FundLog.Model
+@using FundLog.Api.Features.Transactions
+
+@inherits FluxorComponent
+
+@inject IDispatcher Dispatcher
+@inject IState<TransactionState> State
+
+<PageTitle>Accounts</PageTitle>
+<h3>Accounts</h3>
+
+<AuthorizeView>
+  <Authorized>
+
+    @if (State.Value.State != TransactionLoadingState.Init)
+    {
+      <p>@(_accounts.Count) accounts</p>
+      <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+
+          @foreach (Account a in _accounts)
+          {
+            <tr>
+              <td>@a.Name</td>
+              <td>$@((-a.Balance).ToString("#.00"))</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <button class="btn" @onclick="e => HandleAddClick(e)">+ Add Account</button>
+    }
+    else if (State.Value.State == TransactionLoadingState.Load)
+    {
+      <p><em>Loading...</em></p>
+    }
+    else
+    {
+      <p><em>Ready</em></p>
+    }
+  </Authorized>
+  <NotAuthorized>
+    <p>Please log in.</p>
+  </NotAuthorized>
+
+</AuthorizeView>
+@code {
+
+  private List<Account> _accounts = new();
+
+  protected override async Task OnInitializedAsync()
+  {
+    _accounts = State.Value.Transactions.Values
+        .Where(t => t.Institution != null)
+        .Select(t => t.Institution)
+        .DistinctBy(inst => inst?.Id)
+        .Select(inst => new Account
+        {
+          Name = inst?.Name ?? "",
+          Transactions = State.Value.Transactions.Values
+            .Where(t => t.Institution?.Id == inst?.Id)
+            .OrderByDescending(t => t.Date)
+            .ToList()
+        }).ToList();
+
+    await Task.CompletedTask;
+  } 
+
+  private void HandleAddClick(MouseEventArgs e)
+  {
+    Dispatcher.Dispatch(new AccountAddEffect());
+  }
+}

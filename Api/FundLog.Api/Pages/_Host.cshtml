@@ -1,0 +1,14 @@
+﻿@page "/"
+@namespace FundLog.Api.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = "_Layout";
+}
+
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<script src="js/plaid.js"></script>
+<script src="js/focusElement.js"></script>
+<script src="js/darkmode.js"></script>
+<script src="_content/Fluxor.Blazor.Web/scripts/index.js"></script>
+
+<component type="typeof(App)" render-mode="ServerPrerendered" />

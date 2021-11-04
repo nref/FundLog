@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- <Import Project="$(SolutionDir)Common.props" /> -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Going.Plaid" Version="3.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\FundLog.Domain\FundLog.Domain.csproj" />
+    <ProjectReference Include="..\..\Core\FundLog.Model\FundLog.Model.csproj" />
+  </ItemGroup>
+
+</Project>

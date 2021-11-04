@@ -1,0 +1,45 @@
+﻿@import "compass/css3";
+@import url(https://fonts.googleapis.com/css?family=Cousine);
+
+#console {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  font-size: 16pt;
+  font-family: Inconsolata, monospace;
+  color: white;
+  background-color: #101010;
+}
+
+  #console #container {
+    padding: 1em 1em 1em 1em;
+  }
+
+    #console #container pre {
+      color: #757575;
+    }
+
+  #console .cmdline {
+    outline: none;
+    background-color: transparent;
+    width: 100%;
+    border: 0 !important;
+    font: inherit;
+    color: inherit;
+  }
+
+
+.error-output {
+  color: #ff4e4e
+}
+
+.ok-output {
+  color: #757575;
+}
+
+.input {
+  background-color: transparent;
+  outline: none;
+  border: 0;
+  color: #757575;
+}

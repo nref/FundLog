@@ -1,0 +1,36 @@
+{
+  "profiles": {
+    "WSL": {
+      "commandName": "WSL2",
+      "environmentVariables": {},
+      "distributionName": ""
+    },
+    "no args": {
+      "commandName": "Project"
+    },
+    "interactive": {
+      "commandName": "Project",
+      "commandLineArgs": "interactive"
+    },
+    "get transactions": {
+      "commandName": "Project",
+      "commandLineArgs": "get"
+    },
+    "sync transactions": {
+      "commandName": "Project",
+      "commandLineArgs": "sync"
+    },
+    "add transaction": {
+      "commandName": "Project",
+      "commandLineArgs": "add --amount 10.02 --name food2 --date 2021-12-31"
+    },
+    "delete transaction": {
+      "commandName": "Project",
+      "commandLineArgs": "rm 960b34d2-00c2-40dc-b65c-c1ce1f0f63a7"
+    },
+    "add institution": {
+      "commandName": "Project",
+      "commandLineArgs": "addinstitution"
+    }
+  }
+}

@@ -1,0 +1,60 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- <Import Project="$(SolutionDir)Common.props" /> -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <None Remove="appsettings.Development.json" />
+    <None Remove="appsettings.json" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="appsettings.Development.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Going.Plaid" Version="3.2.1" />
+    <PackageReference Include="Typin" Version="3.1.0" />
+    <PackageReference Include="Lamar.Microsoft.DependencyInjection" Version="7.0.0" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\Infrastructure\FundLog.ObjectGraph\FundLog.ObjectGraph.csproj" />
+    <ProjectReference Include="..\FundLog.Client\FundLog.Client.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Reference Include="Typin">
+      <HintPath>..\..\..\Typin\src\Typin\Typin\bin\Debug\net6.0\Typin.dll</HintPath>
+    </Reference>
+    <Reference Include="Typin.Core">
+      <HintPath>..\..\..\Typin\src\Typin\Typin\bin\Debug\net6.0\Typin.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="index.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

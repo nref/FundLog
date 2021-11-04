@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- <Import Project="$(SolutionDir)Common.props" /> -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\FundLog.Model\FundLog.Model.csproj" />
+  </ItemGroup>
+
+</Project>

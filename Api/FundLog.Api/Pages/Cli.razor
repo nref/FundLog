@@ -1,0 +1,201 @@
+﻿@page "/cli"
+
+@using FundLog.Cli
+@using FundLog.Model
+@using FundLog.ObjectGraph
+@using Lamar.Microsoft.DependencyInjection
+@using Microsoft.AspNetCore.Components;
+@using System.ComponentModel
+@using System.Text
+@using System.Collections.Concurrent
+@using Typin
+@using Typin.Console
+@using Typin.Extensions
+@using Typin.Modes
+@using Typin.Utilities
+
+<PageTitle>CLI</PageTitle>
+<h3>CLI</h3>
+
+<div id="console">
+  <div id="container">
+    <table>
+      @foreach (Command c in _commandHistory)
+      {
+        <tr>
+          <td>
+            > @c.Input
+          </td>
+        </tr>
+        <tr>
+          <td class="@(c.Success ? "ok":"error")-output">@c.Output</td>
+        </tr>
+      }
+      <tr>
+        <td>
+          > <input type="text" class="input" @bind=@_currentCommand.Input @onkeydown="e => HandleKeyDown2(e)"/>
+        </td>
+      </tr>
+    </table>
+    <pre>
+      <code>
+        <textarea spellcheck="false" autofocus rows="25" cols="100" Class="cmdline" @onkeydown="e => HandleKeyDown(e)" value="@Output"/>
+      </code>
+    </pre>
+  </div>
+</div>
+
+@code {
+
+  public class Command
+  {
+    public string Input { get; set; } = "";
+    public string Output { get; set; } = "";
+    public bool Success { get; set; }
+  }
+
+  private List<Command> _commandHistory = new();
+  private Command _currentCommand = new();
+
+  private readonly StringBuilder _output = new();
+
+  public string Output
+  {
+    get
+    {
+      return _output.ToString();
+    }
+    set
+    {
+    }
+  }
+
+  private readonly AutoResetEvent _haveInput = new AutoResetEvent(false);
+  private readonly ConcurrentQueue<string> _inputQueue = new();
+
+  CliApplication? _app;
+  VirtualConsole? _console;
+
+  protected override async Task OnInitializedAsync()
+  {
+    if (_app != null)
+    {
+      return;
+    }
+
+    var input = new EchoStream();
+    var output = new EchoStream();
+    var error = output;
+
+    _ = Task.Run(async () => await WriteForeverAsync(input));
+    _ = Task.Run(async () => await ReadForeverAsync(output));
+    _ = Task.Run(async () => await ReadForeverAsync(error));
+
+    _console = new VirtualConsole(input, false, output, false, error, false) /*{ EchoOutput = false }*/;
+
+    _app = new CliApplicationBuilder()
+      .AddCommandsFromThisAssembly()
+      .AddCommandsFrom(typeof(AddTransactionCommand).Assembly)
+      .UseInteractiveMode(true, options =>
+      {
+        options.SetPrompt("fundlog > ");
+      })
+      .UseConsole(_console)
+      .UseExceptionHandler<ExceptionHandler>()
+      .UseLamar(services =>
+      {
+        var builder = new ConfigurationBuilder();
+        builder.AddJsonFile("appsettings.json");
+        builder.AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", true);
+        IConfigurationRoot config = builder.Build();
+
+        var root = new CompositionRoot(new DomainConfig
+        {
+          UseSignalRClient = true,
+        });
+        services.AddLamar(root.Registry);
+      })
+      .Build();
+
+    _ = _app.RunAsync();
+
+    await Task.CompletedTask;
+  }
+
+  private void HandleKeyDown(KeyboardEventArgs e)
+  {
+    string s = e.Key switch
+    {
+      "ArrowUp" => "",
+      "ArrowDown" => "",
+      "ArrowRight" => "",
+      "ArrowLeft" => "",
+      "Enter" => "\n", // \r\n results in double enter
+      "Backspace" => "",
+      "Delete" => "",
+      "Control" => "", 
+      "Shift" => "",
+      "Alt" => "",
+      "OS" => "",
+      "F15" => "", // occurs spuriously in Firefox
+      _ => e.Key,
+    }; 
+
+    if (e.CtrlKey && e.Key == "a")
+    {
+      s = $"{CharExtensions.CtrlA}";
+    }
+
+    _inputQueue.Enqueue(s);
+    _haveInput.Set();
+  }
+
+  private void HandleKeyDown2(KeyboardEventArgs e)
+  {
+    if (e.Key == "Enter")
+    {
+      _currentCommand.Output = "this is output";
+      _currentCommand.Success = _currentCommand.Input == "cats";
+      _commandHistory.Add(_currentCommand);
+      _currentCommand = new();
+      StateHasChanged();
+    }
+  }
+
+  private async Task ReadForeverAsync(EchoStream stream, CancellationToken ct = default)
+  {
+    var buf = new byte[1024];
+
+    while (!ct.IsCancellationRequested)
+    {
+      // Read at least one byte, at most buf.Length bytes
+      int count = Math.Max(1, (int)(stream.Length - stream.Position));
+      int read = await stream.ReadAsync(buf, 0, Math.Min(buf.Length, count));
+
+      if (read <= 0)
+      {
+        continue;
+      }
+
+      string s = Encoding.UTF8.GetString(buf, 0, read);
+
+      _output.Append(s);
+      await InvokeAsync(() => StateHasChanged());
+    }
+  }
+
+  private async Task WriteForeverAsync(EchoStream stream, CancellationToken ct = default)
+  {
+    while (!ct.IsCancellationRequested)
+    {
+      _haveInput.WaitOne();
+
+      while (_inputQueue.TryDequeue(out string? s))
+      {
+        byte[] buf = Encoding.UTF8.GetBytes(s);
+        await stream.WriteAsync(buf, 0, buf.Length);
+        await stream.FlushAsync();
+      }
+    }
+  }
+}

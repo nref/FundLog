@@ -1,0 +1,14 @@
+﻿<AuthorizeView>
+    <Authorized>
+        <a href="Identity/Account/Manage">Account</a>
+        <form method="post" action="Identity/Account/LogOut">
+            <button type="submit" class="nav-link btn btn-link">Log out</button>
+        </form>
+        <span class="oi oi-account-login" aria-hidden="true"></span>
+    </Authorized>
+    <NotAuthorized>
+        <a href="Identity/Account/Register">Register</a>
+        <a href="Identity/Account/Login">Log in</a>
+        <span class="oi oi-account-logout" aria-hidden="true"></span>
+    </NotAuthorized>
+</AuthorizeView>

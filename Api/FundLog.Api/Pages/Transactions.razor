@@ -1,0 +1,308 @@
+﻿@page "/transactions"
+
+@using FundLog.Api.Features.Transactions
+@using FundLog.Api.Features.Transactions.Actions
+@using FundLog.Api.Features.Transactions.Effects
+@using FundLog.Domain
+@using FundLog.Model
+
+@inherits FluxorComponent
+
+@inject IDispatcher Dispatcher
+@inject IState<TransactionState> State
+
+<PageTitle>Transactions</PageTitle>
+<h3>Transactions</h3>
+
+<AuthorizeView>
+  <Authorized>
+    
+    @if (State.Value.State == TransactionLoadingState.Sync)
+    {
+       <p>Synchronizing...</p>
+    }
+    else
+    {
+      <div>
+        <button class="btn" @onclick="e => HandleSyncClick(e)">⟳</button>
+        <button class="btn add-transaction" @onclick="e => HandleAddClick(e)">＋</button>
+        <button class="btn delete-transaction" hidden="@(_confirmingDelete)" @onclick="e => HandleDeleteClick(e)">🗑</button>
+        <button class="btn delete-transaction-confirm text-success" hidden="@(!_confirmingDelete)" @onclick="e => HandleConfirmDeleteClick(e)">✓</button>
+        <button class="btn delete-transaction-cancel text-danger" hidden="@(!_confirmingDelete)" @onclick="e => HandleCancelDeleteClick(e)">🗙</button>
+      </div>
+    }
+
+    @if (State.Value.State != TransactionLoadingState.Init)
+    {
+      <p>@(_transactions?.Count ?? 0) transactions</p>
+      <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>            
+                  <input type="checkbox" checked=@_allChecked @onchange="e => SelectAll(e)" />
+                </th>
+                <th>Date</th>
+                <th>Name</th>
+                <th>Amount</th>
+                <th>Institution</th>
+                <th>Category</th>
+            </tr>
+        </thead>
+        <tbody>
+
+          @foreach (Transaction t in _toAdd)
+          {
+            @if (t != null)
+            {
+              <tr class="unconfirmed-transaction">
+                <td></td>
+              <td width=200px
+                @onclick="e => HandleDateClick(e, t)"
+                @onfocusout="e => HandleDateFocusOut(e, t)">
+
+                <EditForm Context="dateContext"  Model="@t" hidden="@(!t.EditingDate)">
+                  <InputDate @bind-Value="@t.Date">
+
+                  </InputDate>
+                </EditForm>
+                <div hidden="@t.EditingDate">@t.Date.ToString("yyyy-MM-dd")</div>
+              </td>
+                <td
+                  @onclick="e => HandleNameClick(e, t)" 
+                  @onfocusout="e => HandleNameFocusOut(e, t)">
+
+                    <EditForm Context="nameContext" Model="@t" hidden="@(!t.EditingName)">
+                      <InputText type="text" 
+                        onfocus="this.setSelectionRange(0, this.value.length)"
+                        @bind-Value="@t.Name"
+                        @onkeyup="e => HandleNameKeyUp(e, t)"/>
+                    </EditForm>
+                    <div hidden="@t.EditingName">@t.Name</div>
+                </td>
+                <td
+                  @onclick="e => HandleAmountClick(e, t)" 
+                  @onfocusout="e => HandleAmountFocusOut(e, t)">
+
+                    <EditForm Context="amountContext" Model="@t" hidden="@(!t.EditingAmount)">
+                      <InputNumber 
+                        @bind-Value="@t.Amount"
+                        @onkeyup="e => HandleAddAmountKeyUp(e, t)"/>
+                    </EditForm>
+                    <div hidden="@t.EditingAmount">$@t.Amount</div>
+                </td>
+                <td
+                  @onclick="e => HandleInstitutionClick(e, t)" 
+                  @onfocusout="e => HandleInstitutionFocusOut(e, t)">
+
+                    <EditForm Context="institutionContext" Model="@t" hidden="@(!t.EditingInstitution)">
+                      <InputText type="text" 
+                        onfocus="this.setSelectionRange(0, this.value.length)"
+                        @bind-Value="@t.Institution!.Name"
+                        @onkeyup="e => HandleInstitutionKeyUp(e, t)"/>
+                    </EditForm>
+                    <div hidden="@t.EditingInstitution">@t.Institution!.Name</div>
+                </td>
+                <td>@t.Category</td>
+                <td class="text-success" @onclick="e => HandleAddConfirmClick(e, t)">✓</td>
+                <td class="text-danger" @onclick="e => HandleAddCancelClick(e, t)">🗙</td>
+              </tr>
+            }
+          }
+
+          @foreach (Transaction t in _sortedTransactions)
+          {
+            <tr class="@(t.IsSelected ? "selected":"unselected")-transaction" @onclick="e => HandleRowClicked(e, t)">
+
+              <td >
+                <input type="checkbox" checked=@t.IsSelected @onchange="e => SelectRow(e, t)" />
+              </td>
+              <td>@t.Date.ToString("yyyy-MM-dd")</td>
+              <td hidden=@(t.Pending.HasValue && t.Pending.Value)>@t.Name</td>
+              <td hidden=@(!t.Pending.HasValue || !t.Pending.Value)><i>(Pending) @t.Name</i></td>
+              <td
+                @onclick="e => HandleAmountClick(e, t)" 
+                @onfocusout="e => HandleAmountFocusOut(e, t)">
+
+                  <EditForm Context="existingAmountContext" Model="@t" hidden="@(!t.EditingAmount)">
+                    <InputNumber 
+                      @bind-Value="@t.Amount"
+                      @onkeyup="e => HandleEditAmountKeyUp(e, t)"/>
+                  </EditForm>
+                  <div hidden="@t.EditingAmount">$@((-t.Amount).ToString("#.00"))</div>
+              </td>
+              <td>@t.Institution</td>
+              <td>@t.Category</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+    else if (State.Value.State == TransactionLoadingState.Load)
+    {
+      <p><em>Loading...</em></p>
+    }
+    else
+    {
+      <p><em>Ready</em></p>
+    }
+  </Authorized>
+  <NotAuthorized>
+    <p>Please log in.</p>
+  </NotAuthorized>
+</AuthorizeView>
+
+@code {
+
+  private ICollection<Transaction> _transactions => State.Value.Transactions.Values;
+  private List<Transaction> _sortedTransactions => _transactions.OrderByDescending(t => t.Date).ToList();
+  private List<Transaction> _selectedTransactions => _transactions.Where(t => t.IsSelected).ToList();
+
+  private List<Transaction> _toAdd = new();
+  private bool _allChecked { get; set; }
+  private bool _confirmingDelete { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    SubscribeToAction<LinkCreatedAction>(a =>
+    {
+      Log.Info(nameof(LinkCreatedAction));
+    });
+    await Task.CompletedTask;
+  }
+
+  private void SelectAll(ChangeEventArgs args) => _sortedTransactions.ForEach(t => t.IsSelected = args.Value is bool b && b);
+  private void SelectRow(ChangeEventArgs args, Transaction t) => t.IsSelected = args.Value is bool b && b;
+  private void HandleRowClicked(MouseEventArgs e, Transaction t) => t.IsSelected = !t.IsSelected;
+
+  private void HandleNameClick(MouseEventArgs e, Transaction t)
+  {
+    t.EditingName = true;
+  }
+
+  private void HandleDateClick(MouseEventArgs e, Transaction t)
+  {
+    t.EditingDate = true;
+  }
+
+  private void HandleAmountClick(MouseEventArgs e, Transaction t)
+  {
+    t.EditingAmount = true;
+  }
+
+  private void HandleInstitutionClick(MouseEventArgs e, Transaction t)
+  {
+    t.EditingInstitution = true;
+  }
+
+  private void HandleNameFocusOut(FocusEventArgs e, Transaction t)
+  {
+    t.EditingName = false;
+  }
+
+  private void HandleDateFocusOut(FocusEventArgs e, Transaction t)
+  {
+    t.EditingDate = false;
+  }
+
+  private void HandleAmountFocusOut(FocusEventArgs e, Transaction t)
+  {
+    t.EditingAmount = false;
+  }
+
+  private void HandleInstitutionFocusOut(FocusEventArgs e, Transaction t)
+  {
+    t.EditingInstitution = false;
+  }
+
+  private void HandleNameKeyUp(KeyboardEventArgs e, Transaction t)
+  {
+    switch (e.Code)
+    {
+      case "Enter":
+      case "NumpadEnter":
+        t.EditingName = false;
+        break;
+    }
+  }
+
+  private void HandleAddAmountKeyUp(KeyboardEventArgs e, Transaction t)
+  {
+    switch (e.Code)
+    {
+      case "Enter":
+      case "NumpadEnter":
+        t.EditingAmount = false;
+        break;
+    }
+  }
+
+  private void HandleEditAmountKeyUp(KeyboardEventArgs e, Transaction t)
+  {
+    switch (e.Code)
+    {
+      case "Enter":
+      case "NumpadEnter":
+        t.EditingAmount = false;
+        HandleTransactionUpdated(t);
+        break;
+    }
+  }
+  
+  private void HandleTransactionUpdated(Transaction t)
+  {
+    Dispatcher.Dispatch(new TransactionUpdateEffect(t));
+  }
+
+  private void HandleInstitutionKeyUp(KeyboardEventArgs e, Transaction t)
+  {
+    switch (e.Code)
+    {
+      case "Enter":
+      case "NumpadEnter":
+        t.EditingInstitution = false;
+        break;
+    }
+  }
+
+  private void HandleAddClick(MouseEventArgs e)
+  {
+    _toAdd.Add(new Transaction());
+  }
+
+  private void HandleAddConfirmClick(MouseEventArgs e, Transaction t)
+  {
+    Dispatcher.Dispatch(new TransactionAddEffect(t));
+    _toAdd.Remove(t);
+  }
+
+  private void HandleAddCancelClick(MouseEventArgs e, Transaction t)
+  {
+    _toAdd.Remove(t);
+  }
+
+  private void HandleSyncClick(MouseEventArgs e)
+  {
+    Dispatcher.Dispatch(new TransactionsSyncEffect());
+  }
+
+  private void HandleDeleteClick(MouseEventArgs e)
+  {
+    _confirmingDelete = true;
+  }
+
+  private void HandleConfirmDeleteClick(MouseEventArgs e)
+  {
+    _confirmingDelete = false;
+    foreach (var t in _selectedTransactions)
+    {
+      t.IsSelected = false;
+      Dispatcher.Dispatch(new TransactionDeleteEffect(t));
+    }
+  }
+
+  private async Task HandleCancelDeleteClick(MouseEventArgs e)
+  {
+    _confirmingDelete = false;
+    await Task.CompletedTask;
+  }
+}

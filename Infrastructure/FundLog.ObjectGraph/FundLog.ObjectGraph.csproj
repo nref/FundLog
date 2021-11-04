@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Lamar" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Api\FundLog.Client\FundLog.Client.csproj" />
+    <ProjectReference Include="..\..\Core\FundLog.Domain\FundLog.Domain.csproj" />
+    <ProjectReference Include="..\FundLog.Data\FundLog.Data.csproj" />
+    <ProjectReference Include="..\PlaidAdapter\PlaidAdapter.csproj" />
+  </ItemGroup>
+
+</Project>

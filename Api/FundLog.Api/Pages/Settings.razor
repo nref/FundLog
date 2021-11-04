@@ -1,0 +1,17 @@
+﻿@page "/settings"
+
+<PageTitle>Settings</PageTitle>
+<h3>Settings</h3>
+
+@inject IJSRuntime js
+
+<button class="btn" @onclick="e => ToggleDarkMode()">Toggle Dark Mode</button>
+
+@code {
+
+  private async Task ToggleDarkMode()
+  {
+    var darkmode = await js.InvokeAsync<IJSObjectReference>("getDarkMode");
+    await darkmode.InvokeVoidAsync("toggleDarkMode");
+  }
+}

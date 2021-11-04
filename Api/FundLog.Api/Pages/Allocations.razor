@@ -1,0 +1,139 @@
+﻿@page "/allocations"
+
+<PageTitle>Allocations</PageTitle>
+<h3>Allocations</h3>
+
+@using FundLog.Domain
+@using FundLog.Model
+@using Microsoft.JSInterop
+
+@inject ITransactionRepo Repo
+@inject IJSRuntime js
+
+@if (_allocations == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>From</th>
+        <th>To</th>
+        <th>Created</th>
+        <th>ForMonth</th>
+      </tr>
+    </thead>
+    <tbody>
+      @foreach (Allocation am in _allocations)
+      {
+        <tr>
+          <td width=200px
+            @onclick="e => HandleNameClick(e, am)" 
+            @onfocusin="e => HandleNameFocusIn(e, am)" 
+            @onfocusout="e => HandleNameFocusOut(e, am)">
+
+            @* Select all text on click https://stackoverflow.com/a/4067488*@
+
+            <EditForm Model="@am" hidden="@(!am.EditingName)">
+              <InputText type="text" 
+                onfocus="this.setSelectionRange(0, this.value.length)"
+                @ref="@nameInputText"
+                @bind-Value="@am.Name" 
+                @onkeyup="e => HandleNameKeyUp(e, am)" 
+                @oninput="e => HandleNameInput(e, am)"/>
+            </EditForm>
+            <div hidden="@am.EditingName">@am.Name</div>
+          </td>
+
+          <td>@am.From</td>
+          <td>@am.To</td>
+
+          <td width=200px
+            @onclick="e => HandleCreatedClick(e, am)"
+            @onfocusout="e => HandleCreatedFocusOut(e, am)">
+
+            <EditForm Model="@am" hidden="@(!am.EditingCreated)">
+              <InputDate @bind-Value="@am.Created">
+
+              </InputDate>
+            </EditForm>
+            <div hidden="@am.EditingCreated">@am.CreatedString</div>
+          </td>
+
+          <td>@am.ForMonth</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}
+
+@code {
+  private List<Allocation>? _allocations;
+  private InputText? nameInputText;
+
+  private async Task HandleNameClick(MouseEventArgs e, Allocation a)
+  {
+    a.EditingName = true;
+
+    if (nameInputText != null)
+    {
+      await js.InvokeVoidAsync("focusElement", nameInputText.Element);
+    }
+
+    await Task.CompletedTask;
+  }
+
+  private async Task HandleCreatedClick(MouseEventArgs e, Allocation a)
+  {
+    a.EditingCreated = true;
+    await Task.CompletedTask;
+  }
+
+  private async Task HandleNameKeyUp(KeyboardEventArgs e, Allocation a)
+  {
+    switch (e.Code)
+    {
+      case "Enter":
+      case "NumpadEnter":
+        a.EditingName = false;
+        break;
+    }
+
+    await Task.CompletedTask;
+  }
+
+  private async Task HandleFocus(EventArgs e, Allocation a)
+  {
+    await Task.CompletedTask;
+  }
+
+  private async Task HandleNameInput(ChangeEventArgs e, Allocation a)
+  {
+    await Task.CompletedTask;
+  }
+
+  private async Task HandleNameFocusIn(FocusEventArgs e, Allocation a)
+  {
+    await Task.CompletedTask;
+  }
+
+  private async Task HandleNameFocusOut(FocusEventArgs e, Allocation a)
+  {
+    a.EditingName = false;
+    await Task.CompletedTask;
+  }
+
+  private async Task HandleCreatedFocusOut(FocusEventArgs e, Allocation a)
+  {
+    a.EditingCreated = false;
+    await Task.CompletedTask;
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    _allocations = (await Repo.GetAllocationsAsync()).ToList();
+  }
+}

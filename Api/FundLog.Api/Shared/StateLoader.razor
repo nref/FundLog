@@ -1,0 +1,63 @@
+﻿@using System.Security.Claims
+@using FundLog.Api.Features.Transactions
+@using FundLog.Api.Features.Transactions.Actions
+@using FundLog.Api.Features.Transactions.Effects
+@using FundLog.Model.Events
+@inherits FluxorComponent
+
+@inject IFundLogClient Client
+@inject IDispatcher Dispatcher
+@inject IState<TransactionState> State
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@code {
+
+  private bool _authenticated
+  {
+    get
+    {
+      AuthenticationState authState = AuthenticationStateProvider.GetAuthenticationStateAsync().GetAwaiter().GetResult();
+      ClaimsPrincipal user = authState.User;
+      return user.Identity?.IsAuthenticated ?? false;
+    }
+  }
+
+  protected override void OnInitialized()
+  {
+    base.OnInitialized();
+    SubscribeToAction<TransactionsGetFinishAction>(action => Persist());
+    SubscribeToAction<TransactionsSyncFinishAction>(action => Persist());
+
+    if (State.Value.State != TransactionLoadingState.Init)
+    {
+      return;
+    }
+
+    if (!_authenticated)
+    {
+      return;
+    }
+
+    Client.LinkCreateRequested.Subscribe(e => Dispatcher.Dispatch(new LinkCreateEffect 
+    { 
+      Id = e.InstitutionId,
+      LinkToken = e.LinkToken,
+    }));
+    Client.TransactionAdded.Subscribe(t => Dispatcher.Dispatch(new TransactionAddAction { Transaction = t }));
+    Client.TransactionDeleted.Subscribe(id => Dispatcher.Dispatch(new TransactionDeleteAction { Id = id }));
+
+    Client.Connected.Subscribe(_ => Dispatcher.Dispatch(new TransactionsGetEffect()));
+  }
+
+  protected override void OnAfterRender(bool firstRender)
+  {
+    base.OnAfterRender(firstRender);
+
+    if (firstRender)
+    {
+      Dispatcher.Dispatch(new TransactionsLoadEffect());
+    }
+  }
+
+  private void Persist() => Dispatcher.Dispatch(new TransactionsPersistEffect(State.Value));
+}
